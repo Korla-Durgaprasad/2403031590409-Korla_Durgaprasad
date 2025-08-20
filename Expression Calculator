@@ -1,0 +1,102 @@
+import heapq
+from collections import deque
+
+# Driver class
+class Driver:
+    def __init__(self, driver_id, name, location, rating):
+        self.driver_id = driver_id
+        self.name = name
+        self.location = location  # integer position for simplicity
+        self.rating = rating
+    
+    def __repr__(self):
+        return f"Driver({self.name}, Loc:{self.location}, Rating:{self.rating})"
+
+
+# Rider class
+class Rider:
+    def __init__(self, rider_id, name, location, destination):
+        self.rider_id = rider_id
+        self.name = name
+        self.location = location
+        self.destination = destination
+    
+    def __repr__(self):
+        return f"Rider({self.name}, Loc:{self.location}, Dest:{self.destination})"
+
+
+# Ride-Sharing Dispatch System
+class RideSharingSystem:
+    def __init__(self):
+        self.drivers = []  # available drivers (heap/priority queue)
+        self.rider_queue = deque()  # FIFO queue for riders
+        self.ride_history = []  # completed rides
+
+    def add_driver(self, driver: Driver):
+        # initially, drivers are just stored (idle)
+        heapq.heappush(self.drivers, (0, -driver.rating, driver))
+        print(f"Driver added: {driver}")
+
+    def request_ride(self, rider: Rider):
+        self.rider_queue.append(rider)
+        print(f"Ride requested by: {rider}")
+        self.assign_driver()
+
+    def assign_driver(self):
+        if not self.drivers:
+            print("❌ No drivers available now, rider waiting...")
+            return
+        
+        if not self.rider_queue:
+            return
+
+        rider = self.rider_queue.popleft()
+        best_match = None
+        best_score = None
+        new_heap = []
+
+        # Find nearest driver (lowest distance, then highest rating)
+        while self.drivers:
+            _, _, driver = heapq.heappop(self.drivers)
+            distance = abs(driver.location - rider.location)
+            score = (distance, -driver.rating)  # smaller is better
+
+            if best_match is None or score < best_score:
+                if best_match:  # keep previous driver for later
+                    heapq.heappush(new_heap, (0, -best_match.rating, best_match))
+                best_match = driver
+                best_score = score
+            else:
+                heapq.heappush(new_heap, (0, -driver.rating, driver))
+        
+        self.drivers = new_heap
+
+        if best_match:
+            print(f"✅ Assigned {best_match.name} to {rider.name}")
+            self.ride_history.append((rider, best_match))
+        else:
+            print("❌ No suitable driver found.")
+
+    def show_history(self):
+        print("\n--- Ride History ---")
+        for i, (rider, driver) in enumerate(self.ride_history, 1):
+            print(f"{i}. Rider {rider.name} -> Driver {driver.name}")
+        print("-------------------")
+
+
+# ---------------------- TEST ----------------------
+if __name__ == "__main__":
+    system = RideSharingSystem()
+
+    # Add drivers
+    system.add_driver(Driver(1, "Amit", 2, 4.7))
+    system.add_driver(Driver(2, "Ravi", 8, 4.9))
+    system.add_driver(Driver(3, "Sita", 5, 4.5))
+
+    # Riders request rides
+    system.request_ride(Rider(101, "Rahul", 4, 10))
+    system.request_ride(Rider(102, "Priya", 7, 12))
+    system.request_ride(Rider(103, "Ankit", 1, 6))
+
+    # Show ride history
+    system.show_history()
